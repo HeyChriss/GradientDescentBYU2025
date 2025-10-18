@@ -14,7 +14,11 @@ export const API_KEYS = {
   
   // Canvas LMS API Keys
   CANVAS_API_KEY: process.env.CANVAS_API_KEY,
-  CANVAS_BASE_URL: process.env.CANVAS_BASE_URL
+  CANVAS_BASE_URL: process.env.CANVAS_BASE_URL,
+  
+  // Gmail SMTP Configuration
+  GMAIL_USER: process.env.GMAIL_USER,
+  GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD
   
   // Add other API keys as needed
   // ANTHROPIC: process.env.ANTHROPIC_API_KEY || '',
@@ -51,6 +55,16 @@ export const CONFIG = {
     BASE_URL: API_KEYS.CANVAS_BASE_URL,
     DEFAULT_PER_PAGE: 100, // Default number of items per page
     TIMEOUT: 10000, // 10 seconds
+  },
+  
+  // Gmail SMTP Configuration
+  EMAIL: {
+    SMTP_HOST: 'smtp.gmail.com',
+    SMTP_PORT: 465,
+    SMTP_SECURE: true, // true for 465, false for other ports
+    USER: API_KEYS.GMAIL_USER,
+    APP_PASSWORD: API_KEYS.GMAIL_APP_PASSWORD,
+    DEFAULT_FROM: API_KEYS.GMAIL_USER,
   },
   
   // Agent Configuration
@@ -100,6 +114,24 @@ export function validateCanvasKeys(): { isValid: boolean; missing: string[] } {
   
   if (!API_KEYS.CANVAS_BASE_URL) {
     missing.push('CANVAS_BASE_URL');
+  }
+  
+  return {
+    isValid: missing.length === 0,
+    missing
+  };
+}
+
+// Validate Email-specific keys
+export function validateEmailKeys(): { isValid: boolean; missing: string[] } {
+  const missing: string[] = [];
+  
+  if (!API_KEYS.GMAIL_USER) {
+    missing.push('GMAIL_USER');
+  }
+  
+  if (!API_KEYS.GMAIL_APP_PASSWORD) {
+    missing.push('GMAIL_APP_PASSWORD');
   }
   
   return {

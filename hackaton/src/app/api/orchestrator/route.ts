@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AgentOrchestrator } from '../../../agent/orchestrator/AgentOrchestrator';
 import { ResearchAgent } from '../../../agent/agents/ResearchAgent';
 import { CanvasAgent } from '../../../agent/agents/CanvasAgent';
+import { EmailAgent } from '../../../agent/agents/EmailAgent';
+import { FlashcardAgent } from '../../../agent/agents/FlashcardAgent';
 
 // Global orchestrator instance (in production, you'd want to manage this better)
 let orchestrator: AgentOrchestrator | null = null;
@@ -29,6 +31,26 @@ function getOrchestrator(): AgentOrchestrator {
     
     orchestrator.registerAgent(canvasAgent.getId(), canvasAgent);
     console.log('Canvas agent registered with orchestrator');
+    
+    // Register email agent
+    const emailAgent = new EmailAgent({
+      id: 'email-agent-1',
+      name: 'Email Agent',
+      description: 'Specialized agent for email composition and sending via Gmail SMTP'
+    });
+    
+    orchestrator.registerAgent(emailAgent.getId(), emailAgent);
+    console.log('Email agent registered with orchestrator');
+    
+    // Register flashcard agent
+    const flashcardAgent = new FlashcardAgent({
+      id: 'flashcard-agent-1',
+      name: 'Flashcard Agent',
+      description: 'Specialized agent for generating Anki-compatible flashcards from content'
+    });
+    
+    orchestrator.registerAgent(flashcardAgent.getId(), flashcardAgent);
+    console.log('Flashcard agent registered with orchestrator');
     
     console.log('Orchestrator initialized with all agents');
   }
