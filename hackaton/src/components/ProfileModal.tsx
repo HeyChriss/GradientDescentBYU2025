@@ -1,7 +1,7 @@
-"use client";
-import { Save, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+'use client';
+import { useState } from 'react';
+import { X, Save } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 type UserData = {
   firstName: string;
@@ -11,12 +11,12 @@ type UserData = {
   phone: string;
 };
 
-function ProfileModal({
-  isOpen,
-  onClose,
-  userData,
-}: {
-  isOpen: boolean;
+function ProfileModal({ 
+  isOpen, 
+  onClose, 
+  userData 
+}: { 
+  isOpen: boolean; 
   onClose: () => void;
   userData: UserData;
 }) {
@@ -32,26 +32,23 @@ function ProfileModal({
 
   const [saved, setSaved] = useState(false);
 
-  const handlePersonalChange = (
-    field: keyof typeof personalInfo,
-    value: string,
-  ) => {
-    setPersonalInfo((prev) => ({
+  const handlePersonalChange = (field: keyof typeof personalInfo, value: string) => {
+    setPersonalInfo(prev => ({
       ...prev,
-      [field]: value,
+      [field]: value
     }));
     setSaved(false);
   };
 
   const handleSavePersonal = () => {
-    localStorage.setItem("userData", JSON.stringify(personalInfo));
+    localStorage.setItem('userData', JSON.stringify(personalInfo));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem("userData");
-    router.push("/");
+    localStorage.removeItem('userData');
+    router.push('/');
     onClose();
   };
 
@@ -64,7 +61,6 @@ function ProfileModal({
         <div className="flex items-center justify-between p-6 border-b border-slate-700">
           <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
           <button
-            type="button"
             onClick={onClose}
             className="p-2 hover:bg-slate-700 rounded-lg transition"
           >
@@ -77,94 +73,67 @@ function ProfileModal({
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label
-                  htmlFor="firstName"
-                  className="block text-slate-300 text-sm font-medium mb-2"
-                >
+                <label className="block text-slate-300 text-sm font-medium mb-2">
                   First Name
                 </label>
                 <input
-                  id="firstName"
                   type="text"
                   value={personalInfo.firstName}
-                  onChange={(e) =>
-                    handlePersonalChange("firstName", e.target.value)
-                  }
+                  onChange={(e) => handlePersonalChange('firstName', e.target.value)}
                   className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="lastName"
-                  className="block text-slate-300 text-sm font-medium mb-2"
-                >
+                <label className="block text-slate-300 text-sm font-medium mb-2">
                   Last Name
                 </label>
                 <input
-                  id="lastName"
                   type="text"
                   value={personalInfo.lastName}
-                  onChange={(e) =>
-                    handlePersonalChange("lastName", e.target.value)
-                  }
+                  onChange={(e) => handlePersonalChange('lastName', e.target.value)}
                   className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                 />
               </div>
             </div>
 
             <div>
-              <label
-                htmlFor="username"
-                className="block text-slate-300 text-sm font-medium mb-2"
-              >
+              <label className="block text-slate-300 text-sm font-medium mb-2">
                 Username
               </label>
               <input
-                id="username"
                 type="text"
                 value={personalInfo.username}
-                onChange={(e) =>
-                  handlePersonalChange("username", e.target.value)
-                }
+                onChange={(e) => handlePersonalChange('username', e.target.value)}
                 className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="email"
-                className="block text-slate-300 text-sm font-medium mb-2"
-              >
+              <label className="block text-slate-300 text-sm font-medium mb-2">
                 Email
               </label>
               <input
-                id="email"
                 type="email"
                 value={personalInfo.email}
-                onChange={(e) => handlePersonalChange("email", e.target.value)}
+                onChange={(e) => handlePersonalChange('email', e.target.value)}
                 className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="phone"
-                className="block text-slate-300 text-sm font-medium mb-2"
-              >
+              <label className="block text-slate-300 text-sm font-medium mb-2">
                 Phone
               </label>
               <input
-                id="phone"
                 type="tel"
                 value={personalInfo.phone}
-                onChange={(e) => handlePersonalChange("phone", e.target.value)}
+                onChange={(e) => handlePersonalChange('phone', e.target.value)}
                 className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
               />
             </div>
 
             <button
-              type="button"
               onClick={handleSavePersonal}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
             >
@@ -183,7 +152,6 @@ function ProfileModal({
         {/* Footer with Sign Out */}
         <div className="border-t border-slate-700 p-6 bg-slate-700/20">
           <button
-            type="button"
             onClick={handleSignOut}
             className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition"
           >
