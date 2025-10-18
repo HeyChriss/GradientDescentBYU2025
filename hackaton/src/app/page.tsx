@@ -9,6 +9,12 @@ interface ChatMessage {
   timestamp: Date;
   agentUsed?: string;
   taskResult?: any;
+  downloadFiles?: Array<{
+    format: string;
+    filename: string;
+    content: string;
+    mimeType: string;
+  }>;
 }
 
 interface OrchestratorStatus {
@@ -68,7 +74,8 @@ export default function Home() {
           content: data.response,
           timestamp: new Date(),
           agentUsed: data.agentUsed,
-          taskResult: data.taskResult
+          taskResult: data.taskResult,
+          downloadFiles: data.taskResult?.downloadFiles
         };
         
         setMessages(prev => [...prev, assistantMessage]);
@@ -131,6 +138,34 @@ export default function Home() {
     }
   };
 
+  const downloadFile = async (file: { format: string; filename: string; content: string; mimeType: string }) => {
+    try {
+      const response = await fetch('/api/flashcards/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(file),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('Download failed');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="max-w-6xl mx-auto h-screen flex flex-col">
@@ -171,9 +206,11 @@ export default function Home() {
               <p className="mb-4">I can help you with research tasks by delegating them to specialized agents.</p>
               <div className="text-sm space-y-1">
                 <p>Try asking me to:</p>
-                <p>• "Research artificial intelligence trends"</p>
-                <p>• "Find information about climate change"</p>
-                <p>• "Tell me about quantum computing"</p>
+                <p>• &ldquo;Research artificial intelligence trends&rdquo;</p>
+                <p>• &ldquo;Find information about climate change&rdquo;</p>
+                <p>• &ldquo;Tell me about quantum computing&rdquo;</p>
+                <p>• &ldquo;Create flashcards from this content: [paste your study material]&rdquo;</p>
+                <p>• &ldquo;Generate flashcards for biology concepts&rdquo;</p>
               </div>
             </div>
           ) : (
@@ -190,6 +227,28 @@ export default function Home() {
                   }`}
                 >
                   <div className="whitespace-pre-wrap">{message.content}</div>
+                  
+                  {/* Download buttons for flashcard files */}
+                  {message.downloadFiles && message.downloadFiles.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        📁 Download Flashcard Files:
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {message.downloadFiles.map((file, index) => (
+                          <button
+                            key={index}
+                            onClick={() => downloadFile(file)}
+                            className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex items-center gap-1"
+                          >
+                            <span>📥</span>
+                            <span>{file.format.toUpperCase()}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   {message.agentUsed && (
                     <div className="mt-2 text-xs opacity-75">
                       🤖 Used agent: {message.agentUsed}
