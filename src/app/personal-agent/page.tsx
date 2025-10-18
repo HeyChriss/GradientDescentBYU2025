@@ -1,36 +1,74 @@
-// import React, { useState, useRef, useEffect } from 'react';
-// import { Loader, Download, FileText } from 'lucide-react';
+
+// 'use client';
+// import { useState, useEffect } from 'react';
+// import { Mail, Loader, Download, FileText, LogOut } from 'lucide-react';
+// import { useRouter } from 'next/navigation';
+// import ProfileModal from '@/components/ProfileModal';
+
+// type UserData = {
+//   firstName: string;
+//   lastName: string;
+//   username: string;
+//   email: string;
+//   phone: string;
+// };
 
 // export default function PersonalAgent() {
+//   const router = useRouter();
+//   const [userData, setUserData] = useState<UserData | null>(null);
+//   const [isProfileOpen, setIsProfileOpen] = useState(false);
 //   const [transcript, setTranscript] = useState('');
 //   const [loading, setLoading] = useState(false);
-//   const [materials, setMaterials] = useState<{ flashcards?: any[]; studyGuide?: string } | null>(null);
-//   const [agentMessage, setAgentMessage] = useState(
-//     "Hey! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be."
-//   );
+//   const [materials, setMaterials] = useState<{ flashcards?: Array<{ question: string; answer: string }>; studyGuide?: string } | null>(null);
+//   const [agentMessage, setAgentMessage] = useState('');
+
+//   useEffect(() => {
+//     // Get user data from localStorage
+//     const stored = localStorage.getItem('userData');
+//     if (stored) {
+//       const user = JSON.parse(stored);
+//       setUserData(user);
+//       setAgentMessage(`Hey ${user.firstName}! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be.`);
+//     } else {
+//       // Redirect to home if no user data
+//       router.push('/');
+//     }
+//   }, [router]);
 
 //   const handleSubmit = async (textToSubmit: string) => {
-//     if (!textToSubmit.trim()) return;
+//     if (!textToSubmit.trim() || !userData) return;
 
 //     setLoading(true);
 //     setAgentMessage('Processing your request...');
 
 //     try {
-//       const response = await fetch('/api/generate-study-materials', {
+//       const response = await fetch('/api/chat', {
 //         method: 'POST',
 //         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ content: textToSubmit }),
+//         body: JSON.stringify({ 
+//           message: textToSubmit,
+//           userName: userData.firstName,
+//         }),
 //       });
+
+//       if (!response.ok) {
+//         throw new Error('API request failed');
+//       }
 
 //       const data = await response.json();
 
-//       setAgentMessage(
-//         `Perfect! I've created study materials based on "${textToSubmit}". I generated ${data.flashcards?.length || 10} flashcards and a comprehensive study guide. Check them out below!`
-//       );
-//       setMaterials(data);
-//     } catch (error) {
-//       console.error('Error:', error);
+//       if (data.message) {
+//         setAgentMessage(data.message);
+//       }
 
+//       if (data.flashcards || data.studyGuide) {
+//         setMaterials({
+//           flashcards: data.flashcards,
+//           studyGuide: data.studyGuide
+//         });
+//       }
+
+//     } catch (error) {
 //       const demoFlashcards = [
 //         {
 //           question: 'What is the main concept?',
@@ -63,7 +101,7 @@
 //    - Review the study guide before assessments`;
 
 //       setAgentMessage(
-//         `Great! I've prepared study materials for "${textToSubmit}". Check out the flashcards and study guide below!`
+//         `Great ${userData?.firstName}! I've prepared study materials for "${textToSubmit}". Check out the flashcards and study guide below!`
 //       );
 //       setMaterials({
 //         flashcards: demoFlashcards,
@@ -99,18 +137,42 @@
 //     a.click();
 //   };
 
+//   if (!userData) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+//         <div className="text-white">
+//           <Loader size={48} className="animate-spin mx-auto mb-4" />
+//           <p>Loading...</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
 //   return (
 //     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
 //       {/* Header */}
 //       <div className="bg-gradient-to-r from-blue-700 to-blue-900 shadow-2xl p-8 border-b border-blue-600/30">
 //         <div className="max-w-6xl mx-auto">
-//           <div className="flex items-center gap-4 mb-2">
-//             <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-//               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white to-blue-200 animate-pulse"></div>
+//           <div className="flex items-center justify-between">
+//             <div className="flex items-center gap-4">
+//               <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+//                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white to-blue-200 animate-pulse"></div>
+//               </div>
+//               <div>
+//                 <h1 className="text-white font-bold text-3xl">Nora</h1>
+//                 <p className="text-blue-100 text-sm">Your personal learning companion</p>
+//               </div>
 //             </div>
-//             <div>
-//               <h1 className="text-white font-bold text-3xl">Nora</h1>
-//               <p className="text-blue-100 text-sm">Your personal learning companion</p>
+//             <div className="flex items-center gap-4">
+//               <div className="text-right hidden md:block">
+//                 <p className="text-white font-medium">@{userData.username}</p>
+//               </div>
+//               <button 
+//                 onClick={() => setIsProfileOpen(true)}
+//                 className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center border-2 border-white/30 hover:scale-110 transition cursor-pointer"
+//               >
+//                 <span className="text-white font-semibold">{userData.username[0]?.toUpperCase()}</span>
+//               </button>
 //             </div>
 //           </div>
 //         </div>
@@ -150,26 +212,28 @@
 
 //           {/* Input Section */}
 //           <div className="flex flex-col gap-6">
-//             {/* Text Input */}
 //             <div className="flex gap-3">
 //               <input
 //                 type="text"
 //                 value={transcript}
 //                 onChange={(e) => setTranscript(e.target.value)}
 //                 onKeyPress={(e) => e.key === 'Enter' && handleSubmit(transcript)}
-//                 placeholder="Tell Nora what you want to learn..."
+//                 placeholder={`Tell Nora what you want to learn, ${userData.firstName}...`}
 //                 disabled={loading}
 //                 className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-full px-6 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
 //               />
 //               <button
 //                 onClick={() => handleSubmit(transcript)}
 //                 disabled={loading || !transcript.trim()}
-//                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-full font-semibold shadow-lg transition"
+//                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-full font-semibold shadow-lg transition flex items-center gap-2"
 //               >
 //                 {loading ? (
-//                   <Loader size={20} className="animate-spin" />
+//                   <>
+//                     <Loader size={18} className="animate-spin" />
+//                     Generating...
+//                   </>
 //                 ) : (
-//                   '↵'
+//                   'Generate'
 //                 )}
 //               </button>
 //             </div>
@@ -230,12 +294,19 @@
 //           )}
 //         </div>
 //       </div>
+
+//       {/* Profile Modal */}
+//       <ProfileModal 
+//         isOpen={isProfileOpen}
+//         onClose={() => setIsProfileOpen(false)}
+//         userData={userData}
+//       />
 //     </div>
 //   );
 // }
 'use client';
 import { useState, useEffect } from 'react';
-import { Mail, Loader, Download, FileText, LogOut } from 'lucide-react';
+import { Loader, Download, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ProfileModal from '@/components/ProfileModal';
 
@@ -247,6 +318,8 @@ type UserData = {
   phone: string;
 };
 
+type AgentType = 'study' | 'research' | 'email' | 'canvas';
+
 export default function PersonalAgent() {
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -255,19 +328,81 @@ export default function PersonalAgent() {
   const [loading, setLoading] = useState(false);
   const [materials, setMaterials] = useState<{ flashcards?: Array<{ question: string; answer: string }>; studyGuide?: string } | null>(null);
   const [agentMessage, setAgentMessage] = useState('');
+  const [activeAgent, setActiveAgent] = useState<AgentType>('study');
+  const [showOptions, setShowOptions] = useState(false);
 
   useEffect(() => {
-    // Get user data from localStorage
     const stored = localStorage.getItem('userData');
     if (stored) {
       const user = JSON.parse(stored);
       setUserData(user);
       setAgentMessage(`Hey ${user.firstName}! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be.`);
+      // Show greeting for 5 seconds then transition to options
+      setTimeout(() => {
+        setShowOptions(true);
+      }, 5000);
     } else {
-      // Redirect to home if no user data
       router.push('/');
     }
   }, [router]);
+
+  const getAgentDescription = () => {
+    switch (activeAgent) {
+      case 'study':
+        return `Ready to study? Ask me to create flashcards, generate study guides, or explain difficult concepts.`;
+      case 'research':
+        return `Let's research! Ask me to compile information, analyze data, or find sources on any topic.`;
+      case 'email':
+        return `Need help with writing? Ask me to draft emails, compose letters, or improve your message.`;
+      case 'canvas':
+        return `Connect to Canvas! Ask me about your assignments, courses, announcements, and grades.`;
+      default:
+        return `How can I help you today?`;
+    }
+  };
+
+  const getAgentExamples = () => {
+    switch (activeAgent) {
+      case 'study':
+        return [
+          '"Create flashcards for photosynthesis"',
+          '"Make a study guide for calculus"',
+          '"Generate practice questions"',
+          '"Explain the theory of relativity"'
+        ];
+      case 'research':
+        return [
+          '"Research artificial intelligence trends"',
+          '"Compile sources on climate change"',
+          '"Analyze data on social media usage"',
+          '"Find information about renewable energy"'
+        ];
+      case 'email':
+        return [
+          '"Draft a professional email to my professor"',
+          '"Write a cover letter for a job"',
+          '"Compose a thank you message"',
+          '"Improve the tone of this message"'
+        ];
+      case 'canvas':
+        return [
+          '"What are my upcoming assignments"',
+          '"What courses do I have"',
+          '"Give me the recent announcements"',
+          '"What classes am I failing"',
+          '"When are my assignments due for <insert class name>"'
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const handleAgentSwitch = (agent: AgentType) => {
+    setActiveAgent(agent);
+    setAgentMessage(getAgentDescription());
+    setMaterials(null);
+    setTranscript('');
+  };
 
   const handleSubmit = async (textToSubmit: string) => {
     if (!textToSubmit.trim() || !userData) return;
@@ -282,6 +417,7 @@ export default function PersonalAgent() {
         body: JSON.stringify({ 
           message: textToSubmit,
           userName: userData.firstName,
+          agentType: activeAgent,
         }),
       });
 
@@ -335,7 +471,7 @@ export default function PersonalAgent() {
    - Review the study guide before assessments`;
 
       setAgentMessage(
-        `Great ${userData?.firstName}! I've prepared study materials for "${textToSubmit}". Check out the flashcards and study guide below!`
+        `Great ${userData?.firstName}! I've prepared materials for "${textToSubmit}" as your ${activeAgent} agent. Check out the resources below!`
       );
       setMaterials({
         flashcards: demoFlashcards,
@@ -393,7 +529,7 @@ export default function PersonalAgent() {
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white to-blue-200 animate-pulse"></div>
               </div>
               <div>
-                <h1 className="text-white font-bold text-3xl">Nora</h1>
+                <h1 className="text-white font-bold text-3xl">NoraPal</h1>
                 <p className="text-blue-100 text-sm">Your personal learning companion</p>
               </div>
             </div>
@@ -412,120 +548,205 @@ export default function PersonalAgent() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="max-w-3xl w-full space-y-8">
-          {/* Agent Avatar and Message */}
-          <div className="text-center">
-            <div className="flex justify-center mb-8">
-              <div className={`w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center shadow-2xl border-4 border-blue-400/30 ${
-                loading ? 'animate-pulse scale-110' : 'animate-pulse'
-              } transition-transform`}>
-                <span className="text-white text-5xl font-bold">N</span>
+      {/* Main Layout */}
+      <div className="flex-1 flex relative">
+        {/* Main Content */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-3xl w-full space-y-8">
+            {/* Agent Avatar and Message */}
+            <div className="text-center">
+              <div className="flex justify-center mb-8">
+                <div className={`w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center shadow-2xl border-4 border-blue-400/30 ${
+                  loading ? 'animate-pulse scale-110' : 'animate-pulse'
+                } transition-transform`}>
+                  <span className="text-white text-5xl font-bold">N</span>
+                </div>
+              </div>
+
+              <div className={`bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8 transition-opacity duration-1000 absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md ${
+                showOptions ? 'opacity-0 pointer-events-none' : 'opacity-100'
+              }`}>
+                <p className="text-slate-100 text-2xl leading-relaxed">Welcome, {userData.firstName}! 👋</p>
+                <p className="text-slate-200 text-lg leading-relaxed mt-4">I'm Nora, your AI learning companion. I'm here to help you achieve your goals and reach your full potential.</p>
+              </div>
+
+              <div className={`bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8 transition-opacity duration-1000 ${
+                showOptions ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}>
+                {materials === null && !loading ? (
+                  <div className="space-y-6">
+                    <div>
+                       <p className="text-slate-400 text-sm font-semibold text-center mb-3">
+    Example usage of NoraPal:
+  </p>
+                      <div className="flex justify-center gap-2 mb-6">
+                        <button
+                          onClick={() => handleAgentSwitch('study')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'study'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          📚 Study
+                        </button>
+                        <button
+                          onClick={() => handleAgentSwitch('research')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'research'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          🔍 Research
+                        </button>
+                        <button
+                          onClick={() => handleAgentSwitch('email')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'email'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          ✉️ Email
+                        </button>
+                        <button
+                          onClick={() => handleAgentSwitch('canvas')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'canvas'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          📚 Canvas
+                        </button>
+                      </div>
+                      <p className="text-slate-100 text-lg leading-relaxed mb-6">{getAgentDescription()}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-slate-400 text-sm font-semibold">Try asking these questions:</p>
+                      <div className="space-y-2">
+                        {getAgentExamples().map((example, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              const cleanExample = example.replace(/"/g, '');
+                              setTranscript(cleanExample);
+                              handleSubmit(cleanExample);
+                            }}
+                            className="w-full text-left px-4 py-3 bg-slate-600/30 hover:bg-slate-600/50 rounded-lg text-slate-200 text-sm transition border border-slate-500/30 hover:border-blue-500/50"
+                          >
+                            {example}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-slate-100 text-xl leading-relaxed">{agentMessage}</p>
+                )}
+              </div>
+
+              {loading && (
+                <div className="flex justify-center gap-2 mb-8">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+                  <div
+                    className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '0.1s' }}
+                  ></div>
+                  <div
+                    className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '0.2s' }}
+                  ></div>
+                </div>
+              )}
+            </div>
+
+            {/* Input Section */}
+            <div className={`flex flex-col gap-6 transition-opacity duration-1000 ${
+              showOptions ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSubmit(transcript)}
+                  placeholder={`Tell Nora what you want, ${userData.firstName}...`}
+                  disabled={loading}
+                  className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-full px-6 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
+                <button
+                  onClick={() => handleSubmit(transcript)}
+                  disabled={loading || !transcript.trim()}
+                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-full font-semibold shadow-lg transition flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader size={18} className="animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate'
+                  )}
+                </button>
               </div>
             </div>
 
-            <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8">
-              <p className="text-slate-100 text-xl leading-relaxed">{agentMessage}</p>
-            </div>
+            {/* Materials Display */}
+            {materials && (
+              <div className="space-y-6 mt-12">
+                {materials.flashcards && (
+                  <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6 shadow-2xl">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FileText size={24} className="text-blue-400" />
+                      <span className="text-white font-bold text-xl">
+                        {materials.flashcards.length} Flashcards
+                      </span>
+                      <button
+                        onClick={exportFlashcards}
+                        className="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
+                      >
+                        <Download size={18} />
+                        Export
+                      </button>
+                    </div>
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {materials.flashcards.map((card, i) => (
+                        <div key={i} className="bg-slate-600/40 rounded-lg p-4 border border-slate-500/30">
+                          <p className="text-blue-300 font-semibold text-sm mb-1">Question:</p>
+                          <p className="text-slate-200 mb-3">{card.question}</p>
+                          <p className="text-blue-300 font-semibold text-sm mb-1">Answer:</p>
+                          <p className="text-slate-300">{card.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {loading && (
-              <div className="flex justify-center gap-2 mb-8">
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
-                <div
-                  className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
-                  style={{ animationDelay: '0.1s' }}
-                ></div>
-                <div
-                  className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
-                  style={{ animationDelay: '0.2s' }}
-                ></div>
+                {materials.studyGuide && (
+                  <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6 shadow-2xl">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FileText size={24} className="text-blue-400" />
+                      <span className="text-white font-bold text-xl">Study Guide</span>
+                      <button
+                        onClick={exportStudyGuide}
+                        className="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
+                      >
+                        <Download size={18} />
+                        Export
+                      </button>
+                    </div>
+                    <div className="bg-slate-600/40 rounded-lg p-4 max-h-96 overflow-y-auto border border-slate-500/30">
+                      <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
+                        {materials.studyGuide}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-
-          {/* Input Section */}
-          <div className="flex flex-col gap-6">
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSubmit(transcript)}
-                placeholder={`Tell Nora what you want to learn, ${userData.firstName}...`}
-                disabled={loading}
-                className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-full px-6 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-              <button
-                onClick={() => handleSubmit(transcript)}
-                disabled={loading || !transcript.trim()}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-full font-semibold shadow-lg transition flex items-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader size={18} className="animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate'
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Materials Display */}
-          {materials && (
-            <div className="space-y-6 mt-12">
-              {materials.flashcards && (
-                <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6 shadow-2xl">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText size={24} className="text-blue-400" />
-                    <span className="text-white font-bold text-xl">
-                      {materials.flashcards.length} Flashcards
-                    </span>
-                    <button
-                      onClick={exportFlashcards}
-                      className="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
-                    >
-                      <Download size={18} />
-                      Export
-                    </button>
-                  </div>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {materials.flashcards.map((card, i) => (
-                      <div key={i} className="bg-slate-600/40 rounded-lg p-4 border border-slate-500/30">
-                        <p className="text-blue-300 font-semibold text-sm mb-1">Question:</p>
-                        <p className="text-slate-200 mb-3">{card.question}</p>
-                        <p className="text-blue-300 font-semibold text-sm mb-1">Answer:</p>
-                        <p className="text-slate-300">{card.answer}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {materials.studyGuide && (
-                <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6 shadow-2xl">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText size={24} className="text-blue-400" />
-                    <span className="text-white font-bold text-xl">Study Guide</span>
-                    <button
-                      onClick={exportStudyGuide}
-                      className="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
-                    >
-                      <Download size={18} />
-                      Export
-                    </button>
-                  </div>
-                  <div className="bg-slate-600/40 rounded-lg p-4 max-h-96 overflow-y-auto border border-slate-500/30">
-                    <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
-                      {materials.studyGuide}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
