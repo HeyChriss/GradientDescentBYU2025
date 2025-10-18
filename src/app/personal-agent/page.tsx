@@ -234,45 +234,75 @@
 //   );
 // }
 'use client';
+import { useState, useEffect } from 'react';
+import { Mail, Loader, Download, FileText, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import ProfileModal from '@/components/ProfileModal';
 
-import React, { useState } from 'react';
-import { Loader, Download, FileText } from 'lucide-react';
-
-type Material = {
-  flashcards?: Array<{ question: string; answer: string }>;
-  studyGuide?: string;
+type UserData = {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  phone: string;
 };
 
 export default function PersonalAgent() {
+  const router = useRouter();
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [loading, setLoading] = useState(false);
-  const [materials, setMaterials] = useState<Material | null>(null);
-  const [agentMessage, setAgentMessage] = useState(
-    "Hey! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be."
-  );
+  const [materials, setMaterials] = useState<{ flashcards?: Array<{ question: string; answer: string }>; studyGuide?: string } | null>(null);
+  const [agentMessage, setAgentMessage] = useState('');
+
+  useEffect(() => {
+    // Get user data from localStorage
+    const stored = localStorage.getItem('userData');
+    if (stored) {
+      const user = JSON.parse(stored);
+      setUserData(user);
+      setAgentMessage(`Hey ${user.firstName}! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be.`);
+    } else {
+      // Redirect to home if no user data
+      router.push('/');
+    }
+  }, [router]);
 
   const handleSubmit = async (textToSubmit: string) => {
-    if (!textToSubmit.trim()) return;
+    if (!textToSubmit.trim() || !userData) return;
 
     setLoading(true);
     setAgentMessage('Processing your request...');
 
     try {
-      const response = await fetch('/api/generate-study-materials', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: textToSubmit }),
+        body: JSON.stringify({ 
+          message: textToSubmit,
+          userName: userData.firstName,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
 
       const data = await response.json();
 
-      setAgentMessage(
-        `Perfect! I've created study materials based on "${textToSubmit}". I generated ${data.flashcards?.length || 10} flashcards and a comprehensive study guide. Check them out below!`
-      );
-      setMaterials(data);
-    } catch (error) {
-      console.error('Error:', error);
+      if (data.message) {
+        setAgentMessage(data.message);
+      }
 
+      if (data.flashcards || data.studyGuide) {
+        setMaterials({
+          flashcards: data.flashcards,
+          studyGuide: data.studyGuide
+        });
+      }
+
+    } catch (error) {
       const demoFlashcards = [
         {
           question: 'What is the main concept?',
@@ -305,7 +335,7 @@ export default function PersonalAgent() {
    - Review the study guide before assessments`;
 
       setAgentMessage(
-        `Great! I've prepared study materials for "${textToSubmit}". Check out the flashcards and study guide below!`
+        `Great ${userData?.firstName}! I've prepared study materials for "${textToSubmit}". Check out the flashcards and study guide below!`
       );
       setMaterials({
         flashcards: demoFlashcards,
@@ -341,18 +371,42 @@ export default function PersonalAgent() {
     a.click();
   };
 
+  if (!userData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-white">
+          <Loader size={48} className="animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-900 shadow-2xl p-8 border-b border-blue-600/30">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white to-blue-200 animate-pulse"></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white to-blue-200 animate-pulse"></div>
+              </div>
+              <div>
+                <h1 className="text-white font-bold text-3xl">Nora</h1>
+                <p className="text-blue-100 text-sm">Your personal learning companion</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-white font-bold text-3xl">Nora</h1>
-              <p className="text-blue-100 text-sm">Your personal learning companion</p>
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden md:block">
+                <p className="text-white font-medium">@{userData.username}</p>
+              </div>
+              <button 
+                onClick={() => setIsProfileOpen(true)}
+                className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center border-2 border-white/30 hover:scale-110 transition cursor-pointer"
+              >
+                <span className="text-white font-semibold">{userData.username[0]?.toUpperCase()}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -392,26 +446,28 @@ export default function PersonalAgent() {
 
           {/* Input Section */}
           <div className="flex flex-col gap-6">
-            {/* Text Input */}
             <div className="flex gap-3">
               <input
                 type="text"
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSubmit(transcript)}
-                placeholder="Tell Nora what you want to learn..."
+                placeholder={`Tell Nora what you want to learn, ${userData.firstName}...`}
                 disabled={loading}
                 className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-full px-6 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
               <button
                 onClick={() => handleSubmit(transcript)}
                 disabled={loading || !transcript.trim()}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-full font-semibold shadow-lg transition"
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-full font-semibold shadow-lg transition flex items-center gap-2"
               >
                 {loading ? (
-                  <Loader size={20} className="animate-spin" />
+                  <>
+                    <Loader size={18} className="animate-spin" />
+                    Generating...
+                  </>
                 ) : (
-                  '↵'
+                  'Generate'
                 )}
               </button>
             </div>
@@ -472,6 +528,13 @@ export default function PersonalAgent() {
           )}
         </div>
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        userData={userData}
+      />
     </div>
   );
 }
