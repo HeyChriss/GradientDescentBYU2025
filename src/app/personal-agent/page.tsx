@@ -306,7 +306,7 @@
 // }
 'use client';
 import { useState, useEffect } from 'react';
-import { Loader, Download, FileText } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ProfileModal from '@/components/ProfileModal';
 
@@ -326,16 +326,18 @@ export default function PersonalAgent() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [loading, setLoading] = useState(false);
-  const [materials, setMaterials] = useState<{ flashcards?: Array<{ question: string; answer: string }>; studyGuide?: string } | null>(null);
   const [agentMessage, setAgentMessage] = useState('');
   const [activeAgent, setActiveAgent] = useState<AgentType>('study');
   const [showOptions, setShowOptions] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<Array<{role: string; content: string}>>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem('userData');
+    
     if (stored) {
       const user = JSON.parse(stored);
       setUserData(user);
+      
       setAgentMessage(`Hey ${user.firstName}! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be.`);
       // Show greeting for 5 seconds then transition to options
       setTimeout(() => {
@@ -349,9 +351,9 @@ export default function PersonalAgent() {
   const getAgentDescription = () => {
     switch (activeAgent) {
       case 'study':
-        return `Ready to study? Ask me to create flashcards, generate study guides, or explain difficult concepts.`;
+        return `Ready to study? Ask me to explain difficult concepts, help with homework, or answer questions about any subject.`;
       case 'research':
-        return `Let's research! Ask me to compile information, analyze data, or find sources on any topic.`;
+        return `Let's research! Ask me to find information, analyze data, or search for sources on any topic.`;
       case 'email':
         return `Need help with writing? Ask me to draft emails, compose letters, or improve your message.`;
       case 'canvas':
@@ -365,17 +367,17 @@ export default function PersonalAgent() {
     switch (activeAgent) {
       case 'study':
         return [
-          '"Create flashcards for photosynthesis"',
-          '"Make a study guide for calculus"',
-          '"Generate practice questions"',
-          '"Explain the theory of relativity"'
+          '"Explain the theory of relativity"',
+          '"Help me understand photosynthesis"',
+          '"What is machine learning?"',
+          '"How does the water cycle work?"'
         ];
       case 'research':
         return [
           '"Research artificial intelligence trends"',
-          '"Compile sources on climate change"',
-          '"Analyze data on social media usage"',
-          '"Find information about renewable energy"'
+          '"Find information about climate change"',
+          '"What are the latest developments in renewable energy?"',
+          '"What are the reviews for Professor Jensen at BYU?"'
         ];
       case 'email':
         return [
@@ -386,11 +388,11 @@ export default function PersonalAgent() {
         ];
       case 'canvas':
         return [
-          '"What are my upcoming assignments"',
-          '"What courses do I have"',
-          '"Give me the recent announcements"',
-          '"What classes am I failing"',
-          '"When are my assignments due for <insert class name>"'
+          '"What are my upcoming assignments?"',
+          '"What courses do I have?"',
+          '"Show me assignments due this week"',
+          '"What are my grades?"',
+          '"Show me Week 1 content for Deep Learning"'
         ];
       default:
         return [];
@@ -400,7 +402,6 @@ export default function PersonalAgent() {
   const handleAgentSwitch = (agent: AgentType) => {
     setActiveAgent(agent);
     setAgentMessage(getAgentDescription());
-    setMaterials(null);
     setTranscript('');
   };
 
@@ -411,100 +412,48 @@ export default function PersonalAgent() {
     setAgentMessage('Processing your request...');
 
     try {
-      const response = await fetch('/api/chat', {
+      // Call the orchestrator API with chat action (no API keys needed - uses .env.local)
+      const response = await fetch('/api/orchestrator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          message: textToSubmit,
-          userName: userData.firstName,
-          agentType: activeAgent,
+          action: 'chat',
+          message: textToSubmit
         }),
       });
 
       if (!response.ok) {
-        throw new Error('API request failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'API request failed');
       }
 
       const data = await response.json();
 
-      if (data.message) {
-        setAgentMessage(data.message);
-      }
+      if (data.success) {
+        // Update conversation history
+        if (data.conversationHistory) {
+          setConversationHistory(data.conversationHistory);
+        }
 
-      if (data.flashcards || data.studyGuide) {
-        setMaterials({
-          flashcards: data.flashcards,
-          studyGuide: data.studyGuide
-        });
+        // Set the response message
+        setAgentMessage(data.response);
+
+        // Log which agent was used
+        if (data.agentUsed) {
+          console.log(`Agent used: ${data.agentUsed}`);
+          console.log('Task result:', data.taskResult);
+        }
+      } else {
+        throw new Error(data.error || 'Failed to process request');
       }
 
     } catch (error) {
-      const demoFlashcards = [
-        {
-          question: 'What is the main concept?',
-          answer: 'The primary idea from your content.',
-        },
-        {
-          question: 'How does this relate?',
-          answer: 'It connects to other key concepts.',
-        },
-        {
-          question: 'What are the applications?',
-          answer: 'Real-world uses and examples.',
-        },
-      ];
-
-      const demoGuide = `Study Guide for Your Topic
-
-1. Main Concepts
-   - Key point 1: Important information from your content
-   - Key point 2: Additional crucial details
-   - Key point 3: Supporting information
-
-2. Key Terms
-   - Term 1: Definition and context
-   - Term 2: Definition and context
-
-3. Important Takeaways
-   - Remember to focus on the core concepts
-   - Practice with the flashcards regularly
-   - Review the study guide before assessments`;
-
-      setAgentMessage(
-        `Great ${userData?.firstName}! I've prepared materials for "${textToSubmit}" as your ${activeAgent} agent. Check out the resources below!`
-      );
-      setMaterials({
-        flashcards: demoFlashcards,
-        studyGuide: demoGuide,
-      });
+      console.error('Error:', error);
+      setAgentMessage(`I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
     }
 
     setTranscript('');
     setLoading(false);
-  };
-
-  const exportFlashcards = () => {
-    if (!materials?.flashcards) return;
-    const csv = materials.flashcards
-      .map((card) => `"${card.question}","${card.answer}"`)
-      .join('\n');
-    const header = '"Question","Answer"\n';
-    const blob = new Blob([header + csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'flashcards.csv';
-    a.click();
-  };
-
-  const exportStudyGuide = () => {
-    if (!materials?.studyGuide) return;
-    const blob = new Blob([materials.studyGuide], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'study-guide.txt';
-    a.click();
   };
 
   if (!userData) {
@@ -567,85 +516,86 @@ export default function PersonalAgent() {
                 showOptions ? 'opacity-0 pointer-events-none' : 'opacity-100'
               }`}>
                 <p className="text-slate-100 text-2xl leading-relaxed">Welcome, {userData.firstName}! 👋</p>
-                <p className="text-slate-200 text-lg leading-relaxed mt-4">I'm Nora, your AI learning companion. I'm here to help you achieve your goals and reach your full potential.</p>
+                <p className="text-slate-200 text-lg leading-relaxed mt-4">I'm Nora, your AI college companion. I'm here to help you achieve your university goals and reach your full student potential.</p>
               </div>
 
               <div className={`bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8 transition-opacity duration-1000 ${
                 showOptions ? 'opacity-100' : 'opacity-0 pointer-events-none'
               }`}>
-                {materials === null && !loading ? (
-                  <div className="space-y-6">
-                    <div>
-                       <p className="text-slate-400 text-sm font-semibold text-center mb-3">
-    Example usage of NoraPal:
-  </p>
-                      <div className="flex justify-center gap-2 mb-6">
-                        <button
-                          onClick={() => handleAgentSwitch('study')}
-                          className={`px-4 py-2 rounded-full font-semibold transition ${
-                            activeAgent === 'study'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                          }`}
-                        >
-                          📚 Study
-                        </button>
-                        <button
-                          onClick={() => handleAgentSwitch('research')}
-                          className={`px-4 py-2 rounded-full font-semibold transition ${
-                            activeAgent === 'research'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                          }`}
-                        >
-                          🔍 Research
-                        </button>
-                        <button
-                          onClick={() => handleAgentSwitch('email')}
-                          className={`px-4 py-2 rounded-full font-semibold transition ${
-                            activeAgent === 'email'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                          }`}
-                        >
-                          ✉️ Email
-                        </button>
-                        <button
-                          onClick={() => handleAgentSwitch('canvas')}
-                          className={`px-4 py-2 rounded-full font-semibold transition ${
-                            activeAgent === 'canvas'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                          }`}
-                        >
-                          📚 Canvas
-                        </button>
-                      </div>
-                      <p className="text-slate-100 text-lg leading-relaxed mb-6">{getAgentDescription()}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-slate-400 text-sm font-semibold">Try asking these questions:</p>
-                      <div className="space-y-2">
-                        {getAgentExamples().map((example, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              const cleanExample = example.replace(/"/g, '');
-                              setTranscript(cleanExample);
-                              handleSubmit(cleanExample);
-                            }}
-                            className="w-full text-left px-4 py-3 bg-slate-600/30 hover:bg-slate-600/50 rounded-lg text-slate-200 text-sm transition border border-slate-500/30 hover:border-blue-500/50"
-                          >
-                            {example}
-                          </button>
-                        ))}
-                      </div>
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-slate-100 text-lg leading-relaxed mb-6">{getAgentDescription()}</p>
+                    <div className="flex justify-center gap-2 mb-6">
+                      <button
+                        onClick={() => handleAgentSwitch('study')}
+                        className={`px-4 py-2 rounded-full font-semibold transition ${
+                          activeAgent === 'study'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        📚 Study
+                      </button>
+                      <button
+                        onClick={() => handleAgentSwitch('research')}
+                        className={`px-4 py-2 rounded-full font-semibold transition ${
+                          activeAgent === 'research'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        🔍 Research
+                      </button>
+                      <button
+                        onClick={() => handleAgentSwitch('email')}
+                        className={`px-4 py-2 rounded-full font-semibold transition ${
+                          activeAgent === 'email'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        ✉️ Email
+                      </button>
+                      <button
+                        onClick={() => handleAgentSwitch('canvas')}
+                        className={`px-4 py-2 rounded-full font-semibold transition ${
+                          activeAgent === 'canvas'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        📚 Canvas
+                      </button>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-slate-100 text-xl leading-relaxed">{agentMessage}</p>
-                )}
+                  <div className="space-y-2">
+                    <p className="text-slate-400 text-sm font-semibold">Example usage of NoraPal:</p>
+                    <div className="space-y-2">
+                      {getAgentExamples().map((example, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            const cleanExample = example.replace(/"/g, '');
+                            setTranscript(cleanExample);
+                          }}
+                          className="w-full text-left px-4 py-3 bg-slate-600/30 hover:bg-slate-600/50 rounded-lg text-slate-200 text-sm transition border border-slate-500/30 hover:border-blue-500/50"
+                        >
+                          {example}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Response Message Display */}
+              {showOptions && agentMessage && agentMessage !== getAgentDescription() && (
+                <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8">
+                  <div className="prose prose-invert max-w-none">
+                    <div className="text-slate-100 text-left leading-relaxed whitespace-pre-wrap">{agentMessage}</div>
+                  </div>
+                </div>
+              )}
 
               {loading && (
                 <div className="flex justify-center gap-2 mb-8">
@@ -684,7 +634,7 @@ export default function PersonalAgent() {
                   {loading ? (
                     <>
                       <Loader size={18} className="animate-spin" />
-                      Generating...
+                      Processing...
                     </>
                   ) : (
                     'Generate'
@@ -692,60 +642,6 @@ export default function PersonalAgent() {
                 </button>
               </div>
             </div>
-
-            {/* Materials Display */}
-            {materials && (
-              <div className="space-y-6 mt-12">
-                {materials.flashcards && (
-                  <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6 shadow-2xl">
-                    <div className="flex items-center gap-2 mb-4">
-                      <FileText size={24} className="text-blue-400" />
-                      <span className="text-white font-bold text-xl">
-                        {materials.flashcards.length} Flashcards
-                      </span>
-                      <button
-                        onClick={exportFlashcards}
-                        className="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
-                      >
-                        <Download size={18} />
-                        Export
-                      </button>
-                    </div>
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {materials.flashcards.map((card, i) => (
-                        <div key={i} className="bg-slate-600/40 rounded-lg p-4 border border-slate-500/30">
-                          <p className="text-blue-300 font-semibold text-sm mb-1">Question:</p>
-                          <p className="text-slate-200 mb-3">{card.question}</p>
-                          <p className="text-blue-300 font-semibold text-sm mb-1">Answer:</p>
-                          <p className="text-slate-300">{card.answer}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {materials.studyGuide && (
-                  <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6 shadow-2xl">
-                    <div className="flex items-center gap-2 mb-4">
-                      <FileText size={24} className="text-blue-400" />
-                      <span className="text-white font-bold text-xl">Study Guide</span>
-                      <button
-                        onClick={exportStudyGuide}
-                        className="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
-                      >
-                        <Download size={18} />
-                        Export
-                      </button>
-                    </div>
-                    <div className="bg-slate-600/40 rounded-lg p-4 max-h-96 overflow-y-auto border border-slate-500/30">
-                      <p className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
-                        {materials.studyGuide}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
