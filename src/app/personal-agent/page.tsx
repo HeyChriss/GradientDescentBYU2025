@@ -309,6 +309,7 @@ import { useState, useEffect } from 'react';
 import { Loader } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ProfileModal from '@/components/ProfileModal';
+import AssignmentsDisplay from '../components/AssignmentsDisplay';
 
 type UserData = {
   firstName: string;
@@ -329,24 +330,40 @@ export default function PersonalAgent() {
   const [agentMessage, setAgentMessage] = useState('');
   const [activeAgent, setActiveAgent] = useState<AgentType>('study');
   const [showOptions, setShowOptions] = useState(false);
+  const [showInitialUI, setShowInitialUI] = useState(true);
   const [conversationHistory, setConversationHistory] = useState<Array<{role: string; content: string}>>([]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('userData');
+useEffect(() => {
+  const stored = localStorage.getItem('userData');
+  const storedHistory = localStorage.getItem('conversationHistory');
+
+  if (stored) {
+    const user = JSON.parse(stored);
+    setUserData(user);
     
-    if (stored) {
-      const user = JSON.parse(stored);
-      setUserData(user);
-      
-      setAgentMessage(`Hey ${user.firstName}! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be.`);
-      // Show greeting for 5 seconds then transition to options
-      setTimeout(() => {
-        setShowOptions(true);
-      }, 5000);
+    setAgentMessage(`Hey ${user.firstName}! I'm Nora, your personal student agent. I can help you do research on any topic, learn topics more deeply, and help you be the best student you can be.`);
+
+    // Restore previous chat if it exists
+    if (storedHistory) {
+      const history = JSON.parse(storedHistory);
+      setConversationHistory(history);
+      setShowInitialUI(false);
+      setShowOptions(true);
     } else {
-      router.push('/');
+      setTimeout(() => setShowOptions(true), 5000);
     }
-  }, [router]);
+  } else {
+    router.push('/');
+  }
+}, [router]);
+
+useEffect(() => {
+  if (conversationHistory.length > 0) {
+    localStorage.setItem('conversationHistory', JSON.stringify(conversationHistory));
+  }
+}, [conversationHistory]);
+
+
 
   const getAgentDescription = () => {
     switch (activeAgent) {
@@ -389,7 +406,6 @@ export default function PersonalAgent() {
       case 'canvas':
         return [
           '"What are my upcoming assignments?"',
-          '"What courses do I have?"',
           '"Show me assignments due this week"',
           '"What are my grades?"',
           '"Show me Week 1 content for Deep Learning"'
@@ -408,6 +424,8 @@ export default function PersonalAgent() {
   const handleSubmit = async (textToSubmit: string) => {
     if (!textToSubmit.trim() || !userData) return;
 
+    // Hide initial UI when first request is made
+    setShowInitialUI(false);
     setLoading(true);
     setAgentMessage('Processing your request...');
 
@@ -432,7 +450,12 @@ export default function PersonalAgent() {
       if (data.success) {
         // Update conversation history
         if (data.conversationHistory) {
-          setConversationHistory(data.conversationHistory);
+          setConversationHistory(prev => [
+  ...prev,
+  { role: 'user', content: textToSubmit },
+  { role: 'agent', content: data.response }
+]);
+
         }
 
         // Set the response message
@@ -512,6 +535,7 @@ export default function PersonalAgent() {
                 </div>
               </div>
 
+              {/* Welcome Message */}
               <div className={`bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8 transition-opacity duration-1000 absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md ${
                 showOptions ? 'opacity-0 pointer-events-none' : 'opacity-100'
               }`}>
@@ -519,83 +543,105 @@ export default function PersonalAgent() {
                 <p className="text-slate-200 text-lg leading-relaxed mt-4">I'm Nora, your AI college companion. I'm here to help you achieve your university goals and reach your full student potential.</p>
               </div>
 
-              <div className={`bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8 transition-opacity duration-1000 ${
-                showOptions ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}>
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-slate-100 text-lg leading-relaxed mb-6">{getAgentDescription()}</p>
-                    <div className="flex justify-center gap-2 mb-6">
-                      <button
-                        onClick={() => handleAgentSwitch('study')}
-                        className={`px-4 py-2 rounded-full font-semibold transition ${
-                          activeAgent === 'study'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        📚 Study
-                      </button>
-                      <button
-                        onClick={() => handleAgentSwitch('research')}
-                        className={`px-4 py-2 rounded-full font-semibold transition ${
-                          activeAgent === 'research'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        🔍 Research
-                      </button>
-                      <button
-                        onClick={() => handleAgentSwitch('email')}
-                        className={`px-4 py-2 rounded-full font-semibold transition ${
-                          activeAgent === 'email'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        ✉️ Email
-                      </button>
-                      <button
-                        onClick={() => handleAgentSwitch('canvas')}
-                        className={`px-4 py-2 rounded-full font-semibold transition ${
-                          activeAgent === 'canvas'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        📚 Canvas
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-slate-400 text-sm font-semibold">Example usage of NoraPal:</p>
-                    <div className="space-y-2">
-                      {getAgentExamples().map((example, index) => (
+              {/* Agent Selection and Examples - Only show if showInitialUI is true */}
+              {showInitialUI && (
+                <div className={`bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8 transition-opacity duration-1000 ${
+                  showOptions ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}>
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-slate-100 text-lg leading-relaxed mb-6">{getAgentDescription()}</p>
+                      <div className="flex justify-center gap-2 mb-6">
                         <button
-                          key={index}
-                          onClick={() => {
-                            const cleanExample = example.replace(/"/g, '');
-                            setTranscript(cleanExample);
-                          }}
-                          className="w-full text-left px-4 py-3 bg-slate-600/30 hover:bg-slate-600/50 rounded-lg text-slate-200 text-sm transition border border-slate-500/30 hover:border-blue-500/50"
+                          onClick={() => handleAgentSwitch('study')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'study'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
                         >
-                          {example}
+                          📚 Study
                         </button>
-                      ))}
+                        <button
+                          onClick={() => handleAgentSwitch('research')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'research'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          🔍 Research
+                        </button>
+                        <button
+                          onClick={() => handleAgentSwitch('email')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'email'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          ✉️ Email
+                        </button>
+                        <button
+                          onClick={() => handleAgentSwitch('canvas')}
+                          className={`px-4 py-2 rounded-full font-semibold transition ${
+                            activeAgent === 'canvas'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          📚 Canvas
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-slate-400 text-sm font-semibold">Example usage of NoraPal:</p>
+                      <div className="space-y-2">
+                        {getAgentExamples().map((example, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              const cleanExample = example.replace(/"/g, '');
+                              handleSubmit(cleanExample);
+                            }}
+                            className="w-full text-left px-4 py-3 bg-slate-600/30 hover:bg-slate-600/50 rounded-lg text-slate-200 text-sm transition border border-slate-500/30 hover:border-blue-500/50"
+                          >
+                            {example}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Response Message Display */}
-              {showOptions && agentMessage && agentMessage !== getAgentDescription() && (
+              {agentMessage && <AssignmentsDisplay message={agentMessage} />}
+              {/* {!showInitialUI && agentMessage && (
                 <div className="bg-slate-700/50 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 shadow-2xl mb-8">
                   <div className="prose prose-invert max-w-none">
                     <div className="text-slate-100 text-left leading-relaxed whitespace-pre-wrap">{agentMessage}</div>
                   </div>
                 </div>
-              )}
+              )} */}
+              {/* Conversation History */}
+{conversationHistory.length > 0 && (
+  <div className="space-y-4 mb-8">
+    {conversationHistory.map((msg, index) => (
+      <div
+        key={index}
+        className={`p-4 rounded-2xl max-w-lg mx-auto ${
+          msg.role === 'user'
+            ? 'bg-blue-600/60 text-white self-end text-right'
+            : 'bg-slate-700/50 text-slate-100 text-left'
+        }`}
+      >
+        {msg.content}
+      </div>
+    ))}
+  </div>
+)}
+
 
               {loading && (
                 <div className="flex justify-center gap-2 mb-8">
