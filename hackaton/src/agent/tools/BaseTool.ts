@@ -1,19 +1,28 @@
 /**
  * Base Tool Class
- * 
+ *
  * Abstract base class for all agent tools.
  * Provides common functionality and enforces the tool interface.
  */
 
-import { ToolInterface } from '../core/interfaces';
+import type {
+  ResultData,
+  ToolInterface,
+  ToolParams,
+  UnknownRecord,
+} from "../core/interfaces";
 
 export abstract class BaseTool implements ToolInterface {
   public name: string;
   public description: string;
-  public parameters: Record<string, any>;
+  public parameters: UnknownRecord;
   protected isInitialized: boolean = false;
 
-  constructor(name: string, description: string, parameters: Record<string, any> = {}) {
+  constructor(
+    name: string,
+    description: string,
+    parameters: UnknownRecord = {},
+  ) {
     this.name = name;
     this.description = description;
     this.parameters = parameters;
@@ -36,14 +45,14 @@ export abstract class BaseTool implements ToolInterface {
   /**
    * Get tool parameters schema
    */
-  public getParameters(): Record<string, any> {
+  public getParameters(): UnknownRecord {
     return { ...this.parameters };
   }
 
   /**
    * Execute the tool with given parameters
    */
-  public async execute(params: any): Promise<any> {
+  public async execute(params: ToolParams): Promise<ResultData> {
     if (!this.isInitialized) {
       await this.initialize();
     }
@@ -66,12 +75,12 @@ export abstract class BaseTool implements ToolInterface {
   /**
    * Internal execution method to be implemented by subclasses
    */
-  protected abstract executeInternal(params: any): Promise<any>;
+  protected abstract executeInternal(params: ToolParams): Promise<ResultData>;
 
   /**
    * Validate parameters before execution
    */
-  protected validateParameters(params: any): boolean {
+  protected validateParameters(params: ToolParams): boolean {
     // Basic validation - can be overridden by subclasses
     return params !== null && params !== undefined;
   }

@@ -1,8 +1,14 @@
 /**
  * Core Interfaces for Agent System
- * 
+ *
  * Defines the contracts and types used throughout the agent system.
  */
+
+// Generic types for better type safety
+export type UnknownRecord = Record<string, unknown>;
+export type TaskPayload = UnknownRecord;
+export type ResultData = UnknownRecord;
+export type ToolParams = UnknownRecord;
 
 export interface AgentConfig {
   id: string;
@@ -13,12 +19,12 @@ export interface AgentConfig {
   timeout?: number;
   retryAttempts?: number;
   model?: {
-    provider: 'openai';
+    provider: "openai";
     model: string;
     maxTokens?: number;
     temperature?: number;
   };
-  metadata?: Record<string, any>;
+  metadata?: UnknownRecord;
 }
 
 export interface AgentMessage {
@@ -26,52 +32,52 @@ export interface AgentMessage {
   from: string;
   to: string;
   type: string;
-  payload: any;
+  payload: TaskPayload;
   timestamp: Date;
   priority?: number;
 }
 
 export interface AgentResult {
   success: boolean;
-  result?: any;
+  result?: ResultData;
   error?: string;
   executionTime: number;
-  metadata?: Record<string, any>;
+  metadata?: UnknownRecord;
 }
 
 export interface AgentTask {
   id: string;
   type: string;
-  payload: any;
+  payload: TaskPayload;
   priority?: number;
   timeout?: number;
   retryAttempts?: number;
-  metadata?: Record<string, any>;
+  metadata?: UnknownRecord;
 }
 
 export interface ToolResult {
   success: boolean;
-  result?: any;
+  result?: ResultData;
   error?: string;
   executionTime: number;
-  metadata?: Record<string, any>;
+  metadata?: UnknownRecord;
 }
 
 export interface ToolInterface {
   name: string;
   description: string;
-  parameters: Record<string, any>;
-  execute(params: any): Promise<any>;
+  parameters: UnknownRecord;
+  execute(params: ToolParams): Promise<ResultData>;
 }
 
 export interface AgentInterface {
   getId(): string;
   getConfig(): AgentConfig;
-  getStatus(): 'idle' | 'busy' | 'error';
+  getStatus(): "idle" | "busy" | "error";
   getCapabilities(): string[];
   getTools(): string[];
-  canHandle(task: any): boolean;
-  execute(task: any): Promise<AgentResult>;
+  canHandle(task: TaskPayload): boolean;
+  execute(task: TaskPayload): Promise<AgentResult>;
   sendMessage(targetAgentId: string, message: AgentMessage): Promise<void>;
   handleMessage(message: AgentMessage): Promise<void>;
   cleanup(): Promise<void>;
@@ -90,6 +96,6 @@ export interface OrchestratorInterface {
     agentId: string;
     capabilities: string[];
     tools: string[];
-    status: 'active' | 'inactive' | 'busy';
+    status: "active" | "inactive" | "busy";
   }>;
 }
