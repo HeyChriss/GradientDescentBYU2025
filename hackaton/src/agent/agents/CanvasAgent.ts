@@ -1,95 +1,80 @@
 /**
  * Canvas Agent
- *
+ * 
  * Specialized agent for interacting with Canvas LMS (Learning Management System).
  * Provides tools for accessing course information, assignments, grades, and more.
  */
 
-import { CONFIG, validateCanvasKeys } from "../../config/api-keys";
-import { BaseAgent } from "../core/BaseAgent";
-import type { AgentConfig, AgentResult, ToolParams } from "../core/interfaces";
-import { CanvasTool } from "../tools/CanvasTool";
+import { BaseAgent } from '../core/BaseAgent';
+import { AgentConfig, AgentResult } from '../core/interfaces';
+import { validateCanvasKeys, CONFIG } from '../../config/api-keys';
+import { CanvasTool } from '../tools/CanvasTool';
 
 export interface CanvasTask {
   topic: string;
-  action?:
-    | "get_courses"
-    | "get_assignments"
-    | "get_assignments_by_date"
-    | "get_assignments_by_course_name"
-    | "get_grades"
-    | "get_individual_assignment_grades"
-    | "get_calendar_events"
-    | "get_modules"
-    | "get_announcements"
-    | "general";
+  action?: 'get_courses' | 'get_assignments' | 'get_assignments_by_date' | 'get_assignments_by_course_name' | 'get_grades' | 'get_individual_assignment_grades' | 'get_calendar_events' | 'get_modules' | 'get_announcements' | 'general';
   courseId?: string;
   courseName?: string;
   moduleName?: string;
-  timeRange?: "today" | "tomorrow" | "this_week" | "next_week" | "this_month";
+  timeRange?: 'today' | 'tomorrow' | 'this_week' | 'next_week' | 'this_month';
   startDate?: string;
   endDate?: string;
-  eventType?: "event" | "assignment";
-  outputFormat?: "summary" | "detailed" | "raw";
+  eventType?: 'event' | 'assignment';
+  outputFormat?: 'summary' | 'detailed' | 'raw';
 }
 
 export class CanvasAgent extends BaseAgent {
   private canvasTool: CanvasTool;
 
-  constructor(config: Omit<AgentConfig, "capabilities">) {
+  constructor(config: Omit<AgentConfig, 'capabilities'>) {
     // Validate Canvas API keys
     const validation = validateCanvasKeys();
     if (!validation.isValid) {
-      throw new Error(
-        `Missing required Canvas API keys: ${validation.missing.join(", ")}`,
-      );
+      throw new Error(`Missing required Canvas API keys: ${validation.missing.join(', ')}`);
     }
 
     // Create complete agent configuration with capabilities
     const agentConfig: AgentConfig = {
       ...config,
       capabilities: [
-        "canvas_access",
-        "course_management",
-        "assignment_tracking",
-        "grade_checking",
-        "announcement_retrieval",
-        "calendar_access",
-      ],
+        'canvas_access',
+        'course_management',
+        'assignment_tracking',
+        'grade_checking',
+        'announcement_retrieval',
+        'calendar_access'
+      ]
     };
 
     super(agentConfig.id, agentConfig);
-
+    
     // Initialize Canvas tool
     this.canvasTool = new CanvasTool(
-      CONFIG.CANVAS.API_KEY || "",
-      CONFIG.CANVAS.BASE_URL || "",
+      CONFIG.CANVAS.API_KEY || '',
+      CONFIG.CANVAS.BASE_URL || ''
     );
   }
 
   protected initialize(): void {
     // Register Canvas tool
-    this.registerTool("canvas_api", this.canvasTool);
-
+    this.registerTool('canvas_api', this.canvasTool);
+    
     console.log(`CanvasAgent ${this.id} initialized with Canvas tool`);
-    console.log(
-      `CanvasAgent ${this.id} using model:`,
-      this.getModelConfig().model,
-    );
+    console.log(`CanvasAgent ${this.id} using model:`, this.getModelConfig().model);
   }
 
   protected generateSystemPrompt(): string {
     const currentDate = new Date();
-    const formattedDate = currentDate.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    const formattedDate = currentDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
     });
-    const formattedTime = currentDate.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZoneName: "short",
+    const formattedTime = currentDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
     });
 
     return `You are a Canvas Agent specialized in interacting with Canvas LMS (Learning Management System).
@@ -182,302 +167,193 @@ STYLE:
 Your purpose is to help students stay on top of their Canvas coursework and never miss a deadline.`;
   }
 
-  public async execute(task: ToolParams): Promise<AgentResult> {
+  public async execute(task: any): Promise<AgentResult> {
     const startTime = Date.now();
-    this.setStatus("busy");
+    this.setStatus('busy');
 
     try {
-      const canvasTask = task as unknown as CanvasTask;
-
+      const canvasTask = task as CanvasTask;
+      
       // Validate task
-      if (!this.canHandle(task)) {
-        throw new Error("CanvasAgent cannot handle this task");
+      if (!this.canHandle(canvasTask)) {
+        throw new Error('CanvasAgent cannot handle this task');
       }
 
       console.log(`CanvasAgent ${this.id} starting task: ${canvasTask.topic}`);
-      console.log(
-        `CanvasAgent ${this.id} action: ${canvasTask.action || "general"}`,
-      );
+      console.log(`CanvasAgent ${this.id} action: ${canvasTask.action || 'general'}`);
 
-      let results: {
-        success: boolean;
-        message: string;
-        data?: unknown;
-        error?: string;
-      };
+      let results: any;
 
       // Determine which Canvas action to perform
-      const action = canvasTask.action || "get_assignments"; // Default to get_assignments
-
-      if (action === "get_assignments") {
+      const action = canvasTask.action || 'get_assignments'; // Default to get_assignments
+      
+      if (action === 'get_assignments') {
         console.log(`CanvasAgent ${this.id} fetching all assignments`);
         const assignmentsResult = await this.canvasTool.execute({
-          action: "get_assignments",
-          enrollmentState: "active",
+          action: 'get_assignments',
+          enrollmentState: 'active'
         });
 
-        const formattedAssignments = this.formatAssignments(assignmentsResult);
-        results = {
-          success: true,
-          message: formattedAssignments.summary,
-          data: formattedAssignments,
-        };
-      } else if (action === "get_assignments_by_date") {
-        console.log(
-          `CanvasAgent ${this.id} fetching assignments by date range`,
-        );
+        results = this.formatAssignments(assignmentsResult);
+      } else if (action === 'get_assignments_by_date') {
+        console.log(`CanvasAgent ${this.id} fetching assignments by date range`);
         const assignmentsResult = await this.canvasTool.execute({
-          action: "get_assignments_by_date",
-          enrollmentState: "active",
+          action: 'get_assignments_by_date',
+          enrollmentState: 'active',
           timeRange: canvasTask.timeRange,
           startDate: canvasTask.startDate,
-          endDate: canvasTask.endDate,
+          endDate: canvasTask.endDate
         });
 
-        const formattedAssignments = this.formatAssignmentsByDate(assignmentsResult);
-        results = {
-          success: true,
-          message: formattedAssignments.summary,
-          data: formattedAssignments,
-        };
-      } else if (action === "get_assignments_by_course_name") {
-        console.log(
-          `CanvasAgent ${this.id} fetching assignments by course name: ${canvasTask.courseName}`,
-        );
+        results = this.formatAssignmentsByDate(assignmentsResult);
+      } else if (action === 'get_assignments_by_course_name') {
+        console.log(`CanvasAgent ${this.id} fetching assignments by course name: ${canvasTask.courseName}`);
         const assignmentsResult = await this.canvasTool.execute({
-          action: "get_assignments_by_course_name",
-          courseName: canvasTask.courseName || canvasTask.topic,
+          action: 'get_assignments_by_course_name',
+          courseName: canvasTask.courseName || canvasTask.topic
         });
 
-        const formattedAssignments = this.formatAssignmentsByCourseName(assignmentsResult);
-        results = {
-          success: true,
-          message: formattedAssignments.summary,
-          data: formattedAssignments,
-        };
-      } else if (action === "get_courses") {
+        results = this.formatAssignmentsByCourseName(assignmentsResult);
+      } else if (action === 'get_courses') {
         console.log(`CanvasAgent ${this.id} fetching courses`);
         const coursesResult = await this.canvasTool.execute({
-          action: "get_courses",
-          enrollmentState: "active",
+          action: 'get_courses',
+          enrollmentState: 'active'
         });
 
         results = this.formatCourses(coursesResult);
-      } else if (action === "get_grades") {
+      } else if (action === 'get_grades') {
         console.log(`CanvasAgent ${this.id} fetching grades`);
         const gradesResult = await this.canvasTool.execute({
-          action: "get_grades",
-          enrollmentState: "active",
+          action: 'get_grades',
+          enrollmentState: 'active'
         });
 
         results = this.formatGrades(gradesResult);
-      } else if (action === "get_individual_assignment_grades") {
-        console.log(
-          `CanvasAgent ${this.id} fetching individual assignment grades for course: ${canvasTask.courseId}`,
-        );
+      } else if (action === 'get_individual_assignment_grades') {
+        console.log(`CanvasAgent ${this.id} fetching individual assignment grades for course: ${canvasTask.courseId}`);
         const assignmentGradesResult = await this.canvasTool.execute({
-          action: "get_individual_assignment_grades",
-          courseId: canvasTask.courseId,
+          action: 'get_individual_assignment_grades',
+          courseId: canvasTask.courseId
         });
 
         results = this.formatIndividualAssignmentGrades(assignmentGradesResult);
-      } else if (action === "get_calendar_events") {
+      } else if (action === 'get_calendar_events') {
         console.log(`CanvasAgent ${this.id} fetching calendar events`);
         const calendarEventsResult = await this.canvasTool.execute({
-          action: "get_calendar_events",
+          action: 'get_calendar_events',
           timeRange: canvasTask.timeRange,
           startDate: canvasTask.startDate,
           endDate: canvasTask.endDate,
-          eventType: canvasTask.eventType,
+          eventType: canvasTask.eventType
         });
 
         results = this.formatCalendarEvents(calendarEventsResult);
-      } else if (action === "get_modules") {
-        console.log(
-          `CanvasAgent ${this.id} fetching modules for course: ${canvasTask.courseId || canvasTask.courseName}`,
-        );
+      } else if (action === 'get_modules') {
+        console.log(`CanvasAgent ${this.id} fetching modules for course: ${canvasTask.courseId || canvasTask.courseName}`);
         const modulesResult = await this.canvasTool.execute({
-          action: "get_modules",
+          action: 'get_modules',
           courseId: canvasTask.courseId,
           courseName: canvasTask.courseName,
-          moduleName: canvasTask.moduleName,
+          moduleName: canvasTask.moduleName
         });
 
         results = this.formatModules(modulesResult);
       } else {
         results = {
-          success: false,
+          topic: canvasTask.topic,
           message: `Canvas action '${action}' is not yet implemented.`,
-          data: {
-            topic: canvasTask.topic,
-            availableActions: [
-              "get_assignments",
-              "get_assignments_by_date",
-              "get_assignments_by_course_name",
-              "get_courses",
-              "get_grades",
-              "get_individual_assignment_grades",
-              "get_calendar_events",
-              "get_modules",
-            ],
-          },
+          availableActions: ['get_assignments', 'get_assignments_by_date', 'get_assignments_by_course_name', 'get_courses', 'get_grades', 'get_individual_assignment_grades', 'get_calendar_events', 'get_modules']
         };
       }
 
-      this.setStatus("idle");
-
+      this.setStatus('idle');
+      
       return {
         success: true,
         result: results,
         executionTime: Date.now() - startTime,
         metadata: {
           agentId: this.id,
-          taskType: "canvas",
-          action: canvasTask.action || "general",
-        },
+          taskType: 'canvas',
+          action: canvasTask.action || 'general'
+        }
       };
     } catch (error) {
-      this.setStatus("error");
+      this.setStatus('error');
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        executionTime: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        executionTime: Date.now() - startTime
       };
     }
   }
 
-  public canHandle(task: ToolParams): boolean {
-    return (
-      task &&
-      typeof task === "object" &&
-      "topic" in task &&
-      typeof task.topic === "string" &&
-      task.topic.trim().length > 0
-    );
+  public canHandle(task: any): boolean {
+    return task && 
+           typeof task === 'object' && 
+           'topic' in task && 
+           typeof task.topic === 'string' &&
+           task.topic.trim().length > 0;
   }
 
   public getCapabilities(): string[] {
     return [
-      "canvas_access",
-      "course_management",
-      "assignment_tracking",
-      "grade_checking",
-      "announcement_retrieval",
-      "calendar_access",
+      'canvas_access',
+      'course_management',
+      'assignment_tracking',
+      'grade_checking',
+      'announcement_retrieval',
+      'calendar_access'
     ];
   }
 
   /**
    * Format assignments with time awareness
    */
-  private formatAssignments(data: {
-    assignments?: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }>;
-    coursesChecked?: number;
-  }): {
-    answer: string;
-    summary: string;
-    assignments: {
-      overdue: number;
-      dueToday: number;
-      dueWithin24Hours: number;
-      dueWithin3Days: number;
-      dueWithinWeek: number;
-      upcoming: number;
-      noDueDate: number;
-    };
-  } {
+  private formatAssignments(data: any): any {
     const now = new Date();
     const assignments = data.assignments || [];
 
     // Categorize assignments by due date
-    const overdue: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }> = [];
-    const dueToday: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }> = [];
-    const dueWithin24Hours: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }> = [];
-    const dueWithin3Days: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }> = [];
-    const dueWithinWeek: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }> = [];
-    const upcoming: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }> = [];
-    const noDueDate: Array<{
-      due_at?: string;
-      name?: string;
-      course_id?: number;
-      [key: string]: unknown;
-    }> = [];
+    const overdue: any[] = [];
+    const dueToday: any[] = [];
+    const dueWithin24Hours: any[] = [];
+    const dueWithin3Days: any[] = [];
+    const dueWithinWeek: any[] = [];
+    const upcoming: any[] = [];
+    const noDueDate: any[] = [];
 
-    assignments.forEach(
-      (assignment: {
-        due_at?: string;
-        name?: string;
-        course_id?: number;
-        [key: string]: unknown;
-      }) => {
-        if (!assignment.due_at) {
-          noDueDate.push(assignment);
-          return;
-        }
+    assignments.forEach((assignment: any) => {
+      if (!assignment.due_at) {
+        noDueDate.push(assignment);
+        return;
+      }
 
-        const dueDate = new Date(assignment.due_at);
-        const timeDiff = dueDate.getTime() - now.getTime();
-        const hoursDiff = timeDiff / (1000 * 60 * 60);
-        const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+      const dueDate = new Date(assignment.due_at);
+      const timeDiff = dueDate.getTime() - now.getTime();
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+      const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
 
-        if (timeDiff < 0) {
-          overdue.push(assignment);
-        } else if (
-          hoursDiff <= 24 &&
-          dueDate.toDateString() === now.toDateString()
-        ) {
-          dueToday.push(assignment);
-        } else if (hoursDiff <= 24) {
-          dueWithin24Hours.push(assignment);
-        } else if (daysDiff <= 3) {
-          dueWithin3Days.push(assignment);
-        } else if (daysDiff <= 7) {
-          dueWithinWeek.push(assignment);
-        } else {
-          upcoming.push(assignment);
-        }
-      },
-    );
+      if (timeDiff < 0) {
+        overdue.push(assignment);
+      } else if (hoursDiff <= 24 && dueDate.toDateString() === now.toDateString()) {
+        dueToday.push(assignment);
+      } else if (hoursDiff <= 24) {
+        dueWithin24Hours.push(assignment);
+      } else if (daysDiff <= 3) {
+        dueWithin3Days.push(assignment);
+      } else if (daysDiff <= 7) {
+        dueWithinWeek.push(assignment);
+      } else {
+        upcoming.push(assignment);
+      }
+    });
 
     // Create formatted summary
     let summary = `# Canvas Assignments Summary\n\n`;
     summary += `**Total Assignments:** ${assignments.length}\n`;
-    summary += `**Courses Checked:** ${data.coursesChecked || "N/A"}\n\n`;
+    summary += `**Courses Checked:** ${data.coursesChecked || 'N/A'}\n\n`;
 
     if (overdue.length > 0) {
       summary += `## ⚠️ OVERDUE (${overdue.length})\n\n`;
@@ -533,7 +409,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
 
     return {
       answer: summary,
-      summary: `Found ${assignments.length} assignments across ${data.coursesChecked || 0} courses`,
+      summary: `Found ${assignments.length} assignments across ${data.coursesChecked} courses`,
       assignments: {
         overdue: overdue.length,
         dueToday: dueToday.length,
@@ -541,8 +417,8 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
         dueWithin3Days: dueWithin3Days.length,
         dueWithinWeek: dueWithinWeek.length,
         upcoming: upcoming.length,
-        noDueDate: noDueDate.length,
-      },
+        noDueDate: noDueDate.length
+      }
     };
   }
 
@@ -553,52 +429,51 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
     const assignments = data.assignments || [];
     const dateRange = data.dateRange;
 
-    let summary = `# Canvas Assignments - ${dateRange?.description || "Custom Range"}\n\n`;
+    let summary = `# Canvas Assignments - ${dateRange?.description || 'Custom Range'}\n\n`;
     summary += `**Date Range:** ${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}\n`;
     summary += `**Total Assignments:** ${assignments.length}\n`;
-    summary += `**Courses Checked:** ${data.coursesChecked || "N/A"}\n\n`;
+    summary += `**Courses Checked:** ${data.coursesChecked || 'N/A'}\n\n`;
 
     if (assignments.length === 0) {
       summary += `✅ No assignments due in this time period!\n\n`;
     } else {
       summary += `## 📋 Assignments Due\n\n`;
-
+      
       assignments.forEach((assignment: any, index: number) => {
         const dueDate = new Date(assignment.due_at);
         const now = new Date();
-        const hoursUntilDue =
-          (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-        let urgency = "";
+        const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+        
+        let urgency = '';
         if (hoursUntilDue < 0) {
-          urgency = "⚠️ OVERDUE";
+          urgency = '⚠️ OVERDUE';
         } else if (hoursUntilDue <= 24) {
-          urgency = "🔴 DUE SOON";
+          urgency = '🔴 DUE SOON';
         } else if (hoursUntilDue <= 72) {
-          urgency = "🟡";
+          urgency = '🟡';
         } else {
-          urgency = "📅";
+          urgency = '📅';
         }
 
         summary += `${index + 1}. ${urgency} **${assignment.name}**\n`;
         summary += `   - Course: ${assignment.courseName}\n`;
         summary += `   - Due: ${dueDate.toLocaleString()}\n`;
-
+        
         if (hoursUntilDue > 0) {
           const days = Math.floor(hoursUntilDue / 24);
           const hours = Math.floor(hoursUntilDue % 24);
-          summary += `   - Time left: ${days > 0 ? `${days} day${days > 1 ? "s" : ""}, ` : ""}${hours} hour${hours !== 1 ? "s" : ""}\n`;
+          summary += `   - Time left: ${days > 0 ? `${days} day${days > 1 ? 's' : ''}, ` : ''}${hours} hour${hours !== 1 ? 's' : ''}\n`;
         }
-
+        
         summary += `\n`;
       });
     }
 
     return {
       answer: summary,
-      summary: `Found ${assignments.length} assignments ${dateRange?.description || "in date range"}`,
+      summary: `Found ${assignments.length} assignments ${dateRange?.description || 'in date range'}`,
       assignments: assignments,
-      dateRange: dateRange,
+      dateRange: dateRange
     };
   }
 
@@ -610,17 +485,17 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
     const matchedCourses = data.matchedCourses || [];
 
     let summary = `# Canvas Assignments by Course\n\n`;
-
+    
     if (matchedCourses.length === 0) {
-      summary += `❌ ${data.message || "No courses found"}\n\n`;
+      summary += `❌ ${data.message || 'No courses found'}\n\n`;
       return {
         answer: summary,
-        summary: data.message || "No courses found",
-        assignments: [],
+        summary: data.message || 'No courses found',
+        assignments: []
       };
     }
 
-    summary += `**Matched Courses:** ${matchedCourses.map((c: any) => c.name).join(", ")}\n`;
+    summary += `**Matched Courses:** ${matchedCourses.map((c: any) => c.name).join(', ')}\n`;
     summary += `**Total Assignments:** ${assignments.length}\n\n`;
 
     if (assignments.length === 0) {
@@ -628,31 +503,30 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
     } else {
       // Group assignments by urgency
       const now = new Date();
-
+      
       assignments.forEach((assignment: any, index: number) => {
         const dueDate = assignment.due_at ? new Date(assignment.due_at) : null;
-
-        let urgency = "📋";
-        let timeInfo = "No due date";
-
+        
+        let urgency = '📋';
+        let timeInfo = 'No due date';
+        
         if (dueDate) {
-          const hoursUntilDue =
-            (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
+          const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+          
           if (hoursUntilDue < 0) {
-            urgency = "⚠️ OVERDUE";
+            urgency = '⚠️ OVERDUE';
           } else if (hoursUntilDue <= 24) {
-            urgency = "🔴 DUE SOON";
+            urgency = '🔴 DUE SOON';
           } else if (hoursUntilDue <= 72) {
-            urgency = "🟡";
+            urgency = '🟡';
           }
-
+          
           timeInfo = dueDate.toLocaleString();
-
+          
           if (hoursUntilDue > 0) {
             const days = Math.floor(hoursUntilDue / 24);
             const hours = Math.floor(hoursUntilDue % 24);
-            timeInfo += ` (${days > 0 ? `${days} day${days > 1 ? "s" : ""}, ` : ""}${hours} hour${hours !== 1 ? "s" : ""} left)`;
+            timeInfo += ` (${days > 0 ? `${days} day${days > 1 ? 's' : ''}, ` : ''}${hours} hour${hours !== 1 ? 's' : ''} left)`;
           }
         }
 
@@ -667,9 +541,9 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
 
     return {
       answer: summary,
-      summary: `Found ${assignments.length} assignments for ${matchedCourses.map((c: any) => c.name).join(", ")}`,
+      summary: `Found ${assignments.length} assignments for ${matchedCourses.map((c: any) => c.name).join(', ')}`,
       assignments: assignments,
-      matchedCourses: matchedCourses,
+      matchedCourses: matchedCourses
     };
   }
 
@@ -686,8 +560,8 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       summary += `❌ No enrollments found with grade information.\n\n`;
       return {
         answer: summary,
-        summary: "No enrollments found with grade information",
-        enrollments: [],
+        summary: 'No enrollments found with grade information',
+        enrollments: []
       };
     }
 
@@ -696,7 +570,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       const currentGrade = enrollment.current_grade;
 
       summary += `${index + 1}. **${enrollment.course_name}** (${enrollment.course_code})\n`;
-
+      
       if (currentScore !== null && currentScore !== undefined) {
         summary += `   - Current Grade: ${currentScore}%`;
         if (currentGrade) {
@@ -714,7 +588,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
     return {
       answer: summary,
       summary: `Retrieved grades for ${enrollments.length} enrollments`,
-      enrollments: enrollments,
+      enrollments: enrollments
     };
   }
 
@@ -733,9 +607,9 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       summary += `❌ No graded assignments found for this course.\n\n`;
       return {
         answer: summary,
-        summary: "No graded assignments found",
+        summary: 'No graded assignments found',
         assignments: assignments,
-        gradedAssignments: [],
+        gradedAssignments: []
       };
     }
 
@@ -754,13 +628,12 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
 
       summary += `${index + 1}. **${assignment.name}**\n`;
       summary += `   - Score: ${score}/${pointsPossible}`;
-
+      
       if (grade) {
         summary += ` (${grade})`;
       }
-
-      const percentage =
-        pointsPossible > 0 ? ((score / pointsPossible) * 100).toFixed(1) : "0";
+      
+      const percentage = pointsPossible > 0 ? ((score / pointsPossible) * 100).toFixed(1) : '0';
       summary += ` (${percentage}%)\n`;
 
       if (submittedAt) {
@@ -774,7 +647,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       }
 
       if (submissionType) {
-        summary += `   - Type: ${submissionType.replace("_", " ").toUpperCase()}\n`;
+        summary += `   - Type: ${submissionType.replace('_', ' ').toUpperCase()}\n`;
       }
 
       if (attempt && attempt > 1) {
@@ -792,7 +665,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
         summary += `   - ⚠️ **LATE SUBMISSION**\n`;
       } else if (isMissing) {
         summary += `   - ❌ **MISSING**\n`;
-      } else if (workflowState === "graded") {
+      } else if (workflowState === 'graded') {
         summary += `   - ✅ **GRADED**\n`;
       }
 
@@ -803,7 +676,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       answer: summary,
       summary: `Found ${gradedAssignments.length} graded assignments out of ${data.totalAssignments} total`,
       assignments: assignments,
-      gradedAssignments: gradedAssignments,
+      gradedAssignments: gradedAssignments
     };
   }
 
@@ -830,7 +703,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
     return {
       answer: summary,
       summary: `Found ${courses.length} active courses`,
-      courses: courses,
+      courses: courses
     };
   }
 
@@ -845,7 +718,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
     let summary = `# Canvas Calendar Events\n\n`;
     summary += `**Date Range:** ${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}\n`;
     summary += `**Total Events:** ${events.length}\n`;
-    if (data.eventType && data.eventType !== "all") {
+    if (data.eventType && data.eventType !== 'all') {
       summary += `**Type:** ${data.eventType}\n`;
     }
     summary += `\n`;
@@ -854,8 +727,8 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       summary += `✅ No events scheduled for this time period!\n\n`;
       return {
         answer: summary,
-        summary: "No events found",
-        events: [],
+        summary: 'No events found',
+        events: []
       };
     }
 
@@ -904,9 +777,9 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
 
     return {
       answer: summary,
-      summary: `Found ${events.length} calendar events ${dateRange?.description || "in date range"}`,
+      summary: `Found ${events.length} calendar events ${dateRange?.description || 'in date range'}`,
       events: events,
-      dateRange: dateRange,
+      dateRange: dateRange
     };
   }
 
@@ -914,16 +787,16 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
    * Format a single calendar event
    */
   private formatSingleEvent(event: any, now: Date): string {
-    let eventStr = `- **${event.title || "Untitled Event"}**\n`;
-
+    let eventStr = `- **${event.title || 'Untitled Event'}**\n`;
+    
     if (event.start_at) {
       const startDate = new Date(event.start_at);
       eventStr += `  - Start: ${startDate.toLocaleString()}\n`;
-
+      
       // Calculate time until/since event
       const timeDiff = startDate.getTime() - now.getTime();
       const hoursDiff = Math.abs(timeDiff) / (1000 * 60 * 60);
-
+      
       if (timeDiff > 0 && hoursDiff <= 24) {
         const hours = Math.floor(hoursDiff);
         const minutes = Math.floor((hoursDiff % 1) * 60);
@@ -950,12 +823,11 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
 
     if (event.description) {
       // Strip HTML tags and limit length
-      const plainDescription = event.description.replace(/<[^>]*>/g, "").trim();
+      const plainDescription = event.description.replace(/<[^>]*>/g, '').trim();
       if (plainDescription) {
-        const shortDesc =
-          plainDescription.length > 100
-            ? `${plainDescription.substring(0, 100)}...`
-            : plainDescription;
+        const shortDesc = plainDescription.length > 100 
+          ? plainDescription.substring(0, 100) + '...' 
+          : plainDescription;
         eventStr += `  - Description: ${shortDesc}\n`;
       }
     }
@@ -982,7 +854,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       summary += ` - "${searchTerm}"`;
     }
     summary += `\n\n`;
-
+    
     if (courseName) {
       summary += `**Course:** ${courseName}\n`;
     }
@@ -997,14 +869,14 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       }
       return {
         answer: summary,
-        summary: data.message || "No modules found",
-        modules: [],
+        summary: data.message || 'No modules found',
+        modules: []
       };
     }
 
     modules.forEach((module: any, moduleIndex: number) => {
       summary += `## ${moduleIndex + 1}. ${module.name}\n\n`;
-
+      
       if (module.unlock_at) {
         const unlockDate = new Date(module.unlock_at);
         const now = new Date();
@@ -1018,7 +890,7 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
       }
 
       if (module.published !== undefined) {
-        summary += `📌 **Published:** ${module.published ? "Yes" : "No"}\n`;
+        summary += `📌 **Published:** ${module.published ? 'Yes' : 'No'}\n`;
       }
 
       if (module.items_count) {
@@ -1033,17 +905,17 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
         items.forEach((item: any, itemIndex: number) => {
           // Type emoji mapping
           const typeEmoji: Record<string, string> = {
-            Assignment: "📝",
-            Quiz: "📋",
-            Page: "📄",
-            Discussion: "💬",
-            File: "📎",
-            ExternalUrl: "🔗",
-            ExternalTool: "🔧",
-            SubHeader: "📌",
+            'Assignment': '📝',
+            'Quiz': '📋',
+            'Page': '📄',
+            'Discussion': '💬',
+            'File': '📎',
+            'ExternalUrl': '🔗',
+            'ExternalTool': '🔧',
+            'SubHeader': '📌'
           };
 
-          const emoji = typeEmoji[item.type] || "📌";
+          const emoji = typeEmoji[item.type] || '📌';
           summary += `   ${itemIndex + 1}. ${emoji} **${item.title}**\n`;
           summary += `      - Type: ${item.type}\n`;
 
@@ -1052,16 +924,16 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
             const dueDate = new Date(item.content_details.due_at);
             const now = new Date();
             const isOverdue = dueDate < now;
-
+            
             if (isOverdue) {
               summary += `      - Due: ${dueDate.toLocaleString()} ⚠️ OVERDUE\n`;
             } else {
               summary += `      - Due: ${dueDate.toLocaleString()}\n`;
-
+              
               // Calculate time until due
               const timeDiff = dueDate.getTime() - now.getTime();
               const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
-
+              
               if (daysDiff <= 1) {
                 const hours = Math.floor(timeDiff / (1000 * 60 * 60));
                 summary += `      - Time left: ${hours} hours 🔴\n`;
@@ -1081,16 +953,16 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
           // Show completion requirement
           if (item.completion_requirement) {
             const req = item.completion_requirement;
-            if (req.type === "must_view") {
+            if (req.type === 'must_view') {
               summary += `      - Requirement: Must view\n`;
-            } else if (req.type === "must_submit") {
+            } else if (req.type === 'must_submit') {
               summary += `      - Requirement: Must submit\n`;
-            } else if (req.type === "must_contribute") {
+            } else if (req.type === 'must_contribute') {
               summary += `      - Requirement: Must contribute\n`;
-            } else if (req.type === "min_score") {
+            } else if (req.type === 'min_score') {
               summary += `      - Requirement: Min score ${req.min_score}\n`;
             }
-
+            
             if (req.completed) {
               summary += `      - ✅ Completed\n`;
             }
@@ -1114,11 +986,13 @@ Your purpose is to help students stay on top of their Canvas coursework and neve
 
     return {
       answer: summary,
-      summary: searchTerm
+      summary: searchTerm 
         ? `Found ${modules.length} module(s) matching "${searchTerm}" with ${modules.reduce((sum: number, m: any) => sum + (m.items?.length || 0), 0)} total items`
         : `Retrieved ${modules.length} modules with ${modules.reduce((sum: number, m: any) => sum + (m.items?.length || 0), 0)} total items`,
       modules: modules,
-      courseId: courseId,
+      courseId: courseId
     };
   }
 }
+
+

@@ -1,49 +1,37 @@
 /**
  * Base Agent Class
- *
+ * 
  * Abstract base class that all agents must extend.
  * Provides common functionality and enforces the agent interface.
  * Uses cost-effective models by default (can be overridden).
  */
 
-import { CONFIG } from "../../config/api-keys";
-import type {
-  AgentConfig,
-  AgentInterface,
-  AgentMessage,
-  AgentResult,
-  ToolInterface,
-  ToolParams,
-} from "../core/interfaces";
+import { AgentInterface, AgentConfig, AgentMessage, AgentResult } from '../core/interfaces';
+import { CONFIG } from '../../config/api-keys';
 
 export abstract class BaseAgent implements AgentInterface {
   protected id: string;
   protected config: AgentConfig;
-  protected tools: Map<string, ToolInterface> = new Map();
-  protected status: "idle" | "busy" | "error" = "idle";
-  protected modelConfig: {
-    provider: "openai";
-    model: string;
-    maxTokens?: number;
-    temperature?: number;
-  };
+  protected tools: Map<string, any> = new Map();
+  protected status: 'idle' | 'busy' | 'error' = 'idle';
+  protected modelConfig: any;
   protected systemPrompt: string;
 
   constructor(id: string, config: AgentConfig) {
     this.id = id;
     this.config = config;
-
+    
     // Set default model configuration for base agents (cost-effective)
     this.modelConfig = config.model || {
-      provider: "openai",
+      provider: 'openai',
       model: CONFIG.OPENAI_AGENTS.MODEL,
       maxTokens: CONFIG.OPENAI_AGENTS.MAX_TOKENS,
-      temperature: CONFIG.OPENAI_AGENTS.TEMPERATURE,
+      temperature: CONFIG.OPENAI_AGENTS.TEMPERATURE
     };
-
+    
     // Set system prompt
     this.systemPrompt = this.generateSystemPrompt();
-
+    
     this.initialize();
   }
 
@@ -60,12 +48,12 @@ export abstract class BaseAgent implements AgentInterface {
   /**
    * Execute a task
    */
-  public abstract execute(task: ToolParams): Promise<AgentResult>;
+  public abstract execute(task: any): Promise<AgentResult>;
 
   /**
    * Check if agent can handle a specific task
    */
-  public abstract canHandle(task: ToolParams): boolean;
+  public abstract canHandle(task: any): boolean;
 
   /**
    * Get agent capabilities
@@ -82,28 +70,28 @@ export abstract class BaseAgent implements AgentInterface {
   /**
    * Register a tool with the agent
    */
-  protected registerTool(name: string, tool: ToolInterface): void {
+  protected registerTool(name: string, tool: any): void {
     this.tools.set(name, tool);
   }
 
   /**
    * Get a tool by name
    */
-  protected getTool(name: string): ToolInterface | undefined {
+  protected getTool(name: string): any {
     return this.tools.get(name);
   }
 
   /**
    * Get agent status
    */
-  public getStatus(): "idle" | "busy" | "error" {
+  public getStatus(): 'idle' | 'busy' | 'error' {
     return this.status;
   }
 
   /**
    * Set agent status
    */
-  protected setStatus(status: "idle" | "busy" | "error"): void {
+  protected setStatus(status: 'idle' | 'busy' | 'error'): void {
     this.status = status;
   }
 
@@ -124,12 +112,7 @@ export abstract class BaseAgent implements AgentInterface {
   /**
    * Get model configuration
    */
-  public getModelConfig(): {
-    provider: "openai";
-    model: string;
-    maxTokens?: number;
-    temperature?: number;
-  } {
+  public getModelConfig(): any {
     return { ...this.modelConfig };
   }
 
@@ -143,15 +126,9 @@ export abstract class BaseAgent implements AgentInterface {
   /**
    * Send a message to another agent
    */
-  public async sendMessage(
-    targetAgentId: string,
-    message: AgentMessage,
-  ): Promise<void> {
+  public async sendMessage(targetAgentId: string, message: AgentMessage): Promise<void> {
     // TODO: Implement inter-agent communication
-    console.log(
-      `Agent ${this.id} sending message to ${targetAgentId}:`,
-      message,
-    );
+    console.log(`Agent ${this.id} sending message to ${targetAgentId}:`, message);
   }
 
   /**
@@ -166,7 +143,7 @@ export abstract class BaseAgent implements AgentInterface {
    * Cleanup resources
    */
   public async cleanup(): Promise<void> {
-    this.setStatus("idle");
+    this.setStatus('idle');
     // TODO: Implement cleanup logic
   }
 }
