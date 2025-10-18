@@ -147,7 +147,14 @@ You have complete freedom to decide how to handle each request:
    - User asks about academic progress or performance in Canvas
    - Any Canvas-related queries (courses, deadlines, grades, calendar, events, modules, etc.)
 
-5. **When NOT to Use Any Agent**:
+5. **When to Use Email Agent** (email-agent-1):
+   - User wants to compose, write, or send emails
+   - User asks "help me write an email", "send an email", "compose a message"
+   - User needs help with email content, subject lines, or formatting
+   - User wants to draft professional emails
+   - Any email-related queries (composition, sending, formatting, etc.)
+
+6. **When NOT to Use Any Agent**:
    - General conversation, greetings, or clarifying questions
    - Questions you can answer directly
    - The user is just chatting or asking about your capabilities
@@ -184,6 +191,34 @@ You have complete freedom to decide how to handle each request:
   }
 }
 \`\`\`
+
+### For Email Agent (email-agent-1):
+\`\`\`json
+{
+  "action": "call_agent",
+  "agentId": "email-agent-1",
+  "task": {
+    "topic": "what the user wants to do with email",
+    "action": "compose|draft|send|confirm|help|general",
+    "subject": "optional: email subject line",
+    "content": "optional: email body content",
+    "recipient": "optional: recipient email address",
+    "sender": "optional: sender email address (defaults to configured Gmail)",
+    "cc": "optional: CC recipients (comma-separated)",
+    "bcc": "optional: BCC recipients (comma-separated)",
+    "confirmSend": "optional: true if user has confirmed sending",
+    "outputFormat": "optional: draft|send|preview"
+  }
+}
+\`\`\`
+
+**Important for Email Agent:**
+- If user wants to compose/write emails, use action: "compose" or "draft"
+- If user wants to send emails, use action: "send" (will validate and confirm first)
+- If user confirms email details, use action: "confirm"
+- Always collect: recipient, subject, content before sending
+- The agent will validate and ask for confirmation before sending
+- Extract email details from user messages (recipient, subject, content)
 
 **Important for Canvas Agent:**
 - If user asks for assignments "today", "this week", "next week", etc., use action: "get_assignments_by_date" with timeRange
